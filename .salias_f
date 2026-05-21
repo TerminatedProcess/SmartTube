@@ -1,0 +1,112 @@
+# SmartTube - Project aliases and functions
+# All commands defined here, sourced by .salias
+# Run 'help' to see all available commands
+
+# ── Environment ──
+set -gx PROJECT_DIR /home/dev/work/android/SmartTube
+set -gx JAVA_HOME /usr/lib/jvm/java-11-openjdk   # JDK 14 or older required; 11 works with AGP 7.4
+set -gx SHIELD_IP 192.168.50.250:5555
+set -gx DEV_PKG app.smarttube.fdroid.dev
+set -gx BETA_PKG org.smarttube.beta
+set -gx APK_GLOB "$PROJECT_DIR/smarttubetv/build/outputs/apk/stfdroid/debug/*arm64-v8a.apk"
+set -gx LOG_DIR "$PROJECT_DIR/shieldlogs"
+
+# ── Help ──
+function help
+    clear
+    sed "s|SHIELD_IP|$SHIELD_IP|g;s|DEV_PKG|$DEV_PKG|g;s|BETA_PKG|$BETA_PKG|g" $PROJECT_DIR/.salias_help.txt
+end
+
+# ── Build ──
+alias build='cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon'
+alias clean='cd $PROJECT_DIR; and ./gradlew clean --no-daemon'
+alias submodules='cd $PROJECT_DIR; and git submodule update --init'
+
+# ── Device (SHIELD) ──
+alias shield='adb connect $SHIELD_IP'
+alias devices='adb devices'
+alias packages='adb shell pm list packages | grep -i smarttube'
+alias devstart='adb shell monkey -p $DEV_PKG -c android.intent.category.LEANBACK_LAUNCHER 1'
+alias devstop='adb shell am force-stop $DEV_PKG'
+
+function _latest_apk
+    ls -t $APK_GLOB 2>/dev/null | head -1
+end
+
+function install --description "Install latest dev arm64 APK to the SHIELD (keeps data)"
+    set -l apk (_latest_apk)
+    if test -z "$apk"
+        echo "No arm64 APK found. Run 'build' first."
+        return 1
+    end
+    echo "Installing $apk"
+    adb install -r $apk
+end
+
+function deploy --description "Build, then install dev APK to the SHIELD"
+    cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and install
+end
+
+# ── Git (fork sync) ──
+# master stays a clean mirror of upstream (yuliskov); your work lives on a branch.
+function gitupdate --description "Sync fork from upstream (yuliskov): ff master, rebase mryan, push both"
+    cd $PROJECT_DIR
+    set -l current (git branch --show-current)
+
+    echo "Fetching upstream..."
+    git fetch upstream; or return 1
+
+    echo "Updating master (mirror) from upstream..."
+    git checkout master; or return 1
+    if not git merge upstream/master --ff-only
+        echo "ff-only failed: master has drifted from upstream. Move stray commits to mryan."
+        return 1
+    end
+    git submodule update --init --recursive
+    git push origin master; or return 1
+
+    echo "Rebasing mryan onto master..."
+    git checkout mryan; or return 1
+    if not git rebase master
+        echo "Rebase conflict. Resolve, then run:"
+        echo "  git rebase --continue; and git submodule update --init --recursive; and git push origin mryan --force-with-lease"
+        return 1
+    end
+    git submodule update --init --recursive
+    git push origin mryan --force-with-lease; or return 1
+
+    if test -n "$current"; and test "$current" != mryan
+        git checkout $current
+    end
+    echo "Synced: master mirrors upstream, mryan rebased on top, both pushed to origin."
+end
+
+# ── Caption logging (-> shieldlogs/) ──
+function devlog --description "Capture SmartTube Dev logcat to shieldlogs/dev-caption-test.log"
+    mkdir -p $LOG_DIR
+    adb logcat -c
+    echo "Capturing DEV log -> $LOG_DIR/dev-caption-test.log"
+    echo "Reproduce in SmartTube Dev now, then press Ctrl-C to stop."
+    adb logcat -v time > $LOG_DIR/dev-caption-test.log
+end
+
+function betalog --description "Capture beta-app logcat to shieldlogs/beta-caption-test.log"
+    mkdir -p $LOG_DIR
+    adb logcat -c
+    echo "Capturing BETA log -> $LOG_DIR/beta-caption-test.log"
+    echo "Reproduce in the beta app now, then press Ctrl-C to stop."
+    adb logcat -v time > $LOG_DIR/beta-caption-test.log
+end
+
+function caplog --description "Grep a capture for 429 / subtitle events: caplog dev|beta"
+    if test -z "$argv[1]"
+        echo "Usage: caplog dev|beta"
+        return 1
+    end
+    set -l f $LOG_DIR/$argv[1]-caption-test.log
+    if not test -f "$f"
+        echo "Not found: $f"
+        return 1
+    end
+    LC_ALL=C grep -aiE "Response code: 429|Source error|InvalidResponseCode|timedtext|Subtitle track changed|findBestMatch|Can't create selection|SingleSampleMediaChunk" $f
+end

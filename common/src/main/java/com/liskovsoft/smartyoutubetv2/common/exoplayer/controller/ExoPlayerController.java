@@ -80,11 +80,13 @@ public class ExoPlayerController implements Player.EventListener {
     }
 
     public void openSabr(MediaItemFormatInfo formatInfo) {
+        mMediaSourceFactory.setVisitorCookie(formatInfo.getVisitorCookie());
         MediaSource mediaSource = mMediaSourceFactory.fromSabrFormatInfo(formatInfo);
         openMediaSource(mediaSource);
     }
 
     public void openDash(MediaItemFormatInfo formatInfo) {
+        mMediaSourceFactory.setVisitorCookie(formatInfo.getVisitorCookie());
         MediaSource mediaSource = mMediaSourceFactory.fromDashFormatInfo(formatInfo);
         openMediaSource(mediaSource);
     }
@@ -110,6 +112,7 @@ public class ExoPlayerController implements Player.EventListener {
     }
 
     public void openMerged(MediaItemFormatInfo formatInfo, String hlsPlaylistUrl) {
+        mMediaSourceFactory.setVisitorCookie(formatInfo.getVisitorCookie());
         MediaSource dashMediaSource = mMediaSourceFactory.fromDashFormatInfo(formatInfo);
         MediaSource hlsMediaSource = mMediaSourceFactory.fromHlsPlaylist(hlsPlaylistUrl);
         openMediaSource(new MergingMediaSource(dashMediaSource, hlsMediaSource));

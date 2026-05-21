@@ -69,9 +69,23 @@ public class ExoMediaSourceFactory {
     private static final boolean USE_BANDWIDTH_METER = false;
     private TrackErrorFixer mTrackErrorFixer;
     private Factory mMediaDataSourceFactory;
+    private String mVisitorCookie;
 
     public ExoMediaSourceFactory(Context context) {
         mContext = context;
+    }
+
+    /**
+     * Attach the session's visitor cookie (VISITOR_INFO1_LIVE...) to outgoing requests.
+     * Helps the youtube.com/api/timedtext (subtitle) fetch avoid HTTP 429 by looking like
+     * a real viewer session instead of a bare request.
+     */
+    public void setVisitorCookie(String visitorCookie) {
+        boolean changed = mVisitorCookie == null ? visitorCookie != null : !mVisitorCookie.equals(visitorCookie);
+        if (changed) {
+            mVisitorCookie = visitorCookie;
+            mMediaDataSourceFactory = null; // force rebuild so the new cookie is applied
+        }
     }
 
     public MediaSource fromSabrFormatInfo(MediaItemFormatInfo formatInfo) {
@@ -310,7 +324,12 @@ public class ExoMediaSourceFactory {
         return dataSourceFactory;
     }
 
-    private static void addCommonHeaders(BaseFactory dataSourceFactory) {
+    private void addCommonHeaders(BaseFactory dataSourceFactory) {
+        // Attach the session visitor cookie to lift HTTP 429 on the subtitle (timedtext) fetch.
+        if (mVisitorCookie != null && !mVisitorCookie.isEmpty()) {
+            dataSourceFactory.getDefaultRequestProperties().set("Cookie", mVisitorCookie);
+        }
+
         // Doesn't work
         // Trying to fix 429 error (too many requests)
         //String authorization = RetrofitOkHttpHelper.getAuthHeaders().get("Authorization");

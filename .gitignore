@@ -35,6 +35,8 @@ Thumbs.db
 build/
 
 # my other stuff
+/shieldlogs
+/.claude/
 /smartyoutubetv2/release
 /smarttube/release
 /smarttubetv/release

@@ -50,7 +50,7 @@ android {
     compileSdkVersion project.properties.compileSdkVersion
     buildToolsVersion project.properties.buildToolsVersion
     testOptions.unitTests.includeAndroidResources = true
-    ndkVersion "21.0.6113669" // reduce size of the *.so files (stripping debug symbols)
+    ndkVersion "29.0.14206865" // reduce size of the *.so files (stripping debug symbols)
     
     defaultConfig {
         // values linked with applicationId: searchable.searchSuggestAuthority, searchable.searchSuggestIntentData, VideoContract.CONTENT_AUTHORITY
@@ -169,6 +169,7 @@ android {
         }
         stfdroid {
             applicationId "app.smarttube.fdroid"
+            applicationIdSuffix ".dev" // side-by-side dev build; distinct package
             minSdkVersion 21
             targetSdkVersion project.properties.compileSdkVersion
         }

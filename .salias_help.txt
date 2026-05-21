@@ -1,0 +1,21 @@
+BUILD
+  build             Assemble fdroid debug APK (JDK 11)
+  clean             Gradle clean
+  submodules        git submodule update --init
+
+GIT (fork sync)
+  gitupdate         Sync from upstream: ff master, rebase mryan, push both to fork
+
+DEVICE (SHIELD_IP)
+  shield            adb connect to the SHIELD
+  devices           List adb devices
+  install           Install latest dev arm64 APK (keeps data)
+  deploy            Build, then install to the SHIELD
+  devstart          Launch SmartTube Dev (DEV_PKG)
+  devstop           Force-stop SmartTube Dev
+  packages          List installed smarttube packages
+
+CAPTION LOGGING (-> shieldlogs/)
+  devlog            Capture dev-app logcat; reproduce, then Ctrl-C
+  betalog           Capture beta-app logcat; reproduce, then Ctrl-C
+  caplog dev|beta   Grep a capture for 429 / subtitle events
