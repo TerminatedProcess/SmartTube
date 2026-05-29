@@ -1,5 +1,6 @@
 BUILD
-  build             Assemble fdroid debug APK (JDK 11)
+  build             Assemble fdroid debug APK (JDK 11); prints version
+  stversion         Print SmartTube version (compare to TV About screen)
   clean             Gradle clean
   submodules        git submodule update --init
 

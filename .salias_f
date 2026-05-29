@@ -8,7 +8,7 @@ set -gx JAVA_HOME /usr/lib/jvm/java-11-openjdk   # JDK 14 or older required; 11 
 set -gx SHIELD_IP 192.168.50.250:5555
 set -gx DEV_PKG app.smarttube.fdroid.dev
 set -gx BETA_PKG org.smarttube.beta
-set -gx APK_GLOB "$PROJECT_DIR/smarttubetv/build/outputs/apk/stfdroid/debug/*arm64-v8a.apk"
+set -gx APK_DIR "$PROJECT_DIR/smarttubetv/build/outputs/apk/stfdroid/debug"
 set -gx LOG_DIR "$PROJECT_DIR/shieldlogs"
 
 # ── Help ──
@@ -18,7 +18,16 @@ function help
 end
 
 # ── Build ──
-alias build='cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon'
+function stversion --description "Print the SmartTube (upstream) version from build.gradle"
+    set -l bg $PROJECT_DIR/smarttubetv/build.gradle
+    set -l name (grep -m1 'versionName' $bg | string replace -rf '.*versionName +"([^"]+)".*' '$1')
+    set -l code (grep -m1 'versionCode' $bg | string replace -rf '.*versionCode +([0-9]+).*' '$1')
+    echo "SmartTube version: $name (versionCode $code) — compare with the app's About screen on the TV"
+end
+
+function build --description "Assemble fdroid debug APK (JDK 11); prints version"
+    cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and stversion
+end
 alias clean='cd $PROJECT_DIR; and ./gradlew clean --no-daemon'
 alias submodules='cd $PROJECT_DIR; and git submodule update --init'
 
@@ -30,7 +39,7 @@ alias devstart='adb shell monkey -p $DEV_PKG -c android.intent.category.LEANBACK
 alias devstop='adb shell am force-stop $DEV_PKG'
 
 function _latest_apk
-    ls -t $APK_GLOB 2>/dev/null | head -1
+    ls -t $APK_DIR/*arm64-v8a.apk 2>/dev/null | head -1
 end
 
 function install --description "Install latest dev arm64 APK to the SHIELD (keeps data)"
@@ -43,8 +52,8 @@ function install --description "Install latest dev arm64 APK to the SHIELD (keep
     adb install -r $apk
 end
 
-function deploy --description "Build, then install dev APK to the SHIELD"
-    cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and install
+function deploy --description "Build, then install dev APK to the SHIELD; prints version"
+    cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and stversion; and install
 end
 
 # ── Git (fork sync) ──
@@ -52,6 +61,11 @@ end
 function gitupdate --description "Sync fork from upstream (yuliskov): ff master, rebase mryan, push both"
     cd $PROJECT_DIR
     set -l current (git branch --show-current)
+
+    if not git diff --quiet; or not git diff --cached --quiet
+        echo "Working tree dirty — commit or stash on mryan first."
+        return 1
+    end
 
     echo "Fetching upstream..."
     git fetch upstream; or return 1
