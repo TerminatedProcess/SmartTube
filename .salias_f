@@ -26,6 +26,7 @@ function stversion --description "Print the SmartTube (upstream) version from bu
 end
 
 function build --description "Assemble fdroid debug APK (JDK 11); prints version"
+    clear
     cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and stversion
 end
 alias clean='cd $PROJECT_DIR; and ./gradlew clean --no-daemon'
@@ -53,6 +54,7 @@ function install --description "Install latest dev arm64 APK to the SHIELD (keep
 end
 
 function deploy --description "Build, then install dev APK to the SHIELD; prints version"
+    clear
     cd $PROJECT_DIR; and ./gradlew :smarttubetv:assembleStfdroidDebug --no-daemon; and stversion; and install
 end
 
